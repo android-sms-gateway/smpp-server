@@ -3,14 +3,12 @@ package internal
 import (
 	"context"
 
-	"github.com/capcom6/go-project-template/internal/bot"
-	"github.com/capcom6/go-project-template/internal/config"
-	"github.com/capcom6/go-project-template/internal/example"
-	"github.com/capcom6/go-project-template/internal/server"
+	"github.com/android-sms-gateway/smpp-server/internal/config"
+	"github.com/android-sms-gateway/smpp-server/internal/example"
+	"github.com/android-sms-gateway/smpp-server/internal/server"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/healthfx"
 	"github.com/go-core-fx/logger"
-	"github.com/go-core-fx/telegofx"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -33,7 +31,7 @@ func Run(version healthfx.Version) {
 		// openrouterfx.Module(),
 		// redisfx.Module(),
 		// sqlxfx.Module(),
-		telegofx.Module(true),
+		// telegofx.Module(true),
 		// validatorfx.Module(),
 		// watermillfx.Module(),
 		//
@@ -41,7 +39,6 @@ func Run(version healthfx.Version) {
 		config.Module(),
 		// db.Module(),
 		server.Module(),
-		bot.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),
