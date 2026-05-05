@@ -1,12 +1,12 @@
-// Golang project template
+// SMPP Server
 //
-//	@title			Project API
+//	@title			SMPP Server API
 //	@version		1.0.0
-//	@description	Project API documentation
+//	@description	SMPP Server API documentation
 //
 //	@contact.name	API Support
-//	@contact.url	https://github.com/capcom6
-//	@contact.email	i@capcom.me
+//	@contact.url	https://github.com/android-sms-gateway/smpp-server
+//	@contact.email	support@sms-gate.app
 //
 //	@license.name	Apache 2.0
 //	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
@@ -19,7 +19,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/capcom6/go-project-template/internal"
+	"github.com/android-sms-gateway/smpp-server/internal"
 	"github.com/go-core-fx/healthfx"
 	"github.com/samber/lo"
 )
