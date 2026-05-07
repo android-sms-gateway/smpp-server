@@ -6,6 +6,7 @@ import (
 	"github.com/android-sms-gateway/smpp-server/internal/config"
 	"github.com/android-sms-gateway/smpp-server/internal/example"
 	"github.com/android-sms-gateway/smpp-server/internal/server"
+	"github.com/android-sms-gateway/smpp-server/internal/smpp"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/healthfx"
 	"github.com/go-core-fx/logger"
@@ -39,6 +40,7 @@ func Run(version healthfx.Version) {
 		config.Module(),
 		// db.Module(),
 		server.Module(),
+		smpp.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),

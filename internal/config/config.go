@@ -25,13 +25,33 @@ type exampleConfig struct {
 	Example string `koanf:"example"`
 }
 
+type smppConfig struct {
+	BindAddress string `koanf:"bind_address"` // SMPP bind address (default: 127.0.0.1:2775)
+	TLSCert     string `koanf:"tls_cert"`     // TLS certificate file path
+	TLSKey      string `koanf:"tls_key"`      // TLS key file path
+
+	SourceTON uint8 `koanf:"source_ton"` // Source Type of Number
+	SourceNPI uint8 `koanf:"source_npi"` // Source Number Plan Indicator
+	DestTON   uint8 `koanf:"dest_ton"`   // Destination Type of Number
+	DestNPI   uint8 `koanf:"dest_npi"`   // Destination Number Plan Indicator
+}
+
+type gatewayConfig struct {
+	APIBaseURL     string `koanf:"api_base_url"`     // Gateway API base URL
+	WebhookBaseURL string `koanf:"webhook_base_url"` // Webhook base URL for delivery receipts
+}
+
 type Config struct {
 	HTTP http `koanf:"http"`
 
 	Example exampleConfig `koanf:"example"`
+
+	SMPP    smppConfig    `koanf:"smpp"`
+	Gateway gatewayConfig `koanf:"gateway"`
 }
 
 func Default() Config {
+	//nolint:mnd // default values
 	return Config{
 		HTTP: http{
 			Address:     "127.0.0.1:3000",
@@ -46,6 +66,22 @@ func Default() Config {
 
 		Example: exampleConfig{
 			Example: "example",
+		},
+
+		SMPP: smppConfig{
+			BindAddress: "127.0.0.1:2775",
+			TLSCert:     "",
+			TLSKey:      "",
+
+			SourceTON: 0x01,
+			SourceNPI: 0x01,
+			DestTON:   0x01,
+			DestNPI:   0x01,
+		},
+
+		Gateway: gatewayConfig{
+			APIBaseURL:     "https://api.sms-gate.app/3rdparty/v1",
+			WebhookBaseURL: "",
 		},
 	}
 }
