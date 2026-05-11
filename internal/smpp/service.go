@@ -3,15 +3,19 @@ package smpp
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
 
+	"github.com/android-sms-gateway/smpp-server/internal/sessions"
 	"go.uber.org/zap"
 )
 
 type Service struct {
 	config Config
+
+	sessionsSvc *sessions.Service
 
 	listener net.Listener
 
@@ -20,9 +24,11 @@ type Service struct {
 	logger *zap.Logger
 }
 
-func NewService(config Config, logger *zap.Logger) *Service {
+func NewService(config Config, sessionsSvc *sessions.Service, logger *zap.Logger) *Service {
 	return &Service{
 		config: config,
+
+		sessionsSvc: sessionsSvc,
 
 		listener: nil,
 
@@ -84,9 +90,20 @@ func (s *Service) acceptConnections(ctx context.Context) {
 		default:
 		}
 
-		_, err := s.listener.Accept()
+		conn, err := s.listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 			s.logger.Error("failed to accept connection", zap.Error(err))
+			continue
 		}
+
+		sess := s.sessionsSvc.NewSession(conn)
+		s.wg.Go(func() {
+			defer s.sessionsSvc.RemoveSession(sess.ID())
+
+			sess.Run(ctx)
+		})
 	}
 }

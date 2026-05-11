@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-core-fx/config"
 )
@@ -21,10 +22,6 @@ type openAPIConfig struct {
 	PublicPath string `koanf:"public_path"`
 }
 
-type exampleConfig struct {
-	Example string `koanf:"example"`
-}
-
 type smppConfig struct {
 	BindAddress string `koanf:"bind_address"` // SMPP bind address (default: 127.0.0.1:2775)
 	TLSCert     string `koanf:"tls_cert"`     // TLS certificate file path
@@ -37,14 +34,13 @@ type smppConfig struct {
 }
 
 type gatewayConfig struct {
-	APIBaseURL     string `koanf:"api_base_url"`     // Gateway API base URL
-	WebhookBaseURL string `koanf:"webhook_base_url"` // Webhook base URL for delivery receipts
+	BaseURL        string        `koanf:"api_base_url"`     // Gateway API base URL
+	WebhookBaseURL string        `koanf:"webhook_base_url"` // Webhook base URL for delivery receipts
+	Timeout        time.Duration `koanf:"timeout"`          // Gateway API timeout
 }
 
 type Config struct {
 	HTTP http `koanf:"http"`
-
-	Example exampleConfig `koanf:"example"`
 
 	SMPP    smppConfig    `koanf:"smpp"`
 	Gateway gatewayConfig `koanf:"gateway"`
@@ -64,10 +60,6 @@ func Default() Config {
 			},
 		},
 
-		Example: exampleConfig{
-			Example: "example",
-		},
-
 		SMPP: smppConfig{
 			BindAddress: "127.0.0.1:2775",
 			TLSCert:     "",
@@ -80,8 +72,9 @@ func Default() Config {
 		},
 
 		Gateway: gatewayConfig{
-			APIBaseURL:     "https://api.sms-gate.app/3rdparty/v1",
+			BaseURL:        "https://api.sms-gate.app/3rdparty/v1",
 			WebhookBaseURL: "",
+			Timeout:        60 * time.Second,
 		},
 	}
 }

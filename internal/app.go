@@ -4,9 +4,10 @@ import (
 	"context"
 
 	"github.com/android-sms-gateway/smpp-server/internal/config"
-	"github.com/android-sms-gateway/smpp-server/internal/example"
 	"github.com/android-sms-gateway/smpp-server/internal/server"
+	"github.com/android-sms-gateway/smpp-server/internal/sessions"
 	"github.com/android-sms-gateway/smpp-server/internal/smpp"
+	"github.com/android-sms-gateway/smpp-server/internal/smsgate"
 	"github.com/go-core-fx/fiberfx"
 	"github.com/go-core-fx/healthfx"
 	"github.com/go-core-fx/logger"
@@ -41,10 +42,11 @@ func Run(version healthfx.Version) {
 		// db.Module(),
 		server.Module(),
 		smpp.Module(),
+		smsgate.Module(),
 		//
 		// BUSINESS MODULES
 		fx.Supply(version),
-		example.Module(),
+		sessions.Module(),
 		//
 		fx.Invoke(func(lc fx.Lifecycle, logger *zap.Logger) {
 			lc.Append(fx.Hook{
