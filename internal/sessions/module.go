@@ -10,7 +10,7 @@ func Module() fx.Option {
 	return fx.Module(
 		"sessions",
 		logger.WithNamedLogger("sessions"),
-		fx.Provide(NewService),
+		fx.Provide(NewMetrics, NewService),
 		fx.Invoke(fxutil.RegisterRunnable[*Service]()),
 	)
 }
