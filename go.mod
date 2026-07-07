@@ -12,7 +12,6 @@ require (
 	github.com/go-core-fx/logger v0.0.1
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/google/uuid v1.6.0
-	github.com/prometheus/client_golang v1.23.2
 	github.com/samber/lo v1.53.0
 	github.com/swaggo/swag v1.16.6
 	go.uber.org/fx v1.24.0
@@ -59,6 +58,7 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
