@@ -107,10 +107,12 @@ func (c *Client) QuerySMS(ctx context.Context, messageID string) (*QueryResponse
 		state = MessageStateDelivered
 	case smsgateway.ProcessingStateFailed:
 		state = MessageStateUndeliverable
-	case smsgateway.ProcessingStatePending:
+	case smsgateway.ProcessingStatePending, smsgateway.ProcessingStateCancelling:
 		state = MessageStateScheduled
 	case smsgateway.ProcessingStateProcessed, smsgateway.ProcessingStateSent:
 		state = MessageStateEnroute
+	case smsgateway.ProcessingStateCancelled:
+		state = MessageStateDeleted
 	}
 
 	return &QueryResponse{
