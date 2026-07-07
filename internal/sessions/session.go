@@ -29,14 +29,21 @@ type Session struct {
 
 	writeMu sync.Mutex
 
+	metrics *Metrics
+
 	logger *zap.Logger
 }
 
-func newSession(conn net.Conn, clientFn func(username, password string) *smsgate.Client, logger *zap.Logger) *Session {
+func newSession(
+	conn net.Conn,
+	clientFn func(username, password string) *smsgate.Client,
+	metrics *Metrics,
+	logger *zap.Logger,
+) *Session {
 	id := uuid.New().String()[:8]
 	logger = logger.With(zap.String("session", id))
 
-	return &Session{
+	s := &Session{
 		id:   id,
 		conn: conn,
 
@@ -50,8 +57,13 @@ func newSession(conn net.Conn, clientFn func(username, password string) *smsgate
 
 		writeMu: sync.Mutex{},
 
-		logger: logger,
+		metrics: metrics,
+		logger:  logger,
 	}
+
+	metrics.IncSessionsActive(StateOpen)
+
+	return s
 }
 
 func (s *Session) Run(ctx context.Context) {
@@ -106,6 +118,8 @@ func (s *Session) ID() string {
 func (s *Session) handlePDU(ctx context.Context, p pdu.Body) {
 	h := p.Header()
 	s.logger.Debug("Received PDU", zap.Uint32("id", uint32(h.ID)))
+
+	s.metrics.IncPDUsReceived(h.ID)
 
 	switch h.ID {
 	case pdu.BindTransmitterID:
@@ -168,6 +182,7 @@ func (s *Session) handlePDU(ctx context.Context, p pdu.Body) {
 
 func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transceiverMode bool) {
 	if s.state != StateOpen {
+		s.metrics.IncBindAttempts(receiver, transceiverMode, false)
 		s.sendBindResponse(p, receiver, transceiverMode, ErrInvalidBindStatus)
 		return
 	}
@@ -177,6 +192,7 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 	username, ok := fieldString(fields, pdufield.SystemID)
 	if !ok || username == "" {
 		s.logger.Warn("Missing or empty system_id in bind request")
+		s.metrics.IncBindAttempts(receiver, transceiverMode, false)
 		s.sendBindResponse(p, receiver, transceiverMode, ErrInvalidSystemID)
 		return
 	}
@@ -184,6 +200,7 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 	password, ok := fieldString(fields, pdufield.Password)
 	if !ok || password == "" {
 		s.logger.Warn("Missing or empty password in bind request")
+		s.metrics.IncBindAttempts(receiver, transceiverMode, false)
 		s.sendBindResponse(p, receiver, transceiverMode, ErrInvalidPassword)
 		return
 	}
@@ -206,6 +223,7 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 	}
 
 	if status == ErrNoError {
+		s.metrics.DecSessionsActive(StateOpen)
 		s.client = client
 		switch {
 		case transceiverMode:
@@ -215,6 +233,7 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 		default:
 			s.state = StateBoundTX
 		}
+		s.metrics.IncSessionsActive(s.state)
 		s.logger.Info(
 			"Client bound",
 			zap.String("username", username),
@@ -223,6 +242,7 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 		s.logger.Warn("Bind failed", zap.String("username", username))
 	}
 
+	s.metrics.IncBindAttempts(receiver, transceiverMode, status == ErrNoError)
 	s.sendBindResponse(p, receiver, transceiverMode, status)
 }
 
@@ -244,6 +264,11 @@ func (s *Session) sendBindResponse(req pdu.Body, receiver, transceiverMode bool,
 }
 
 func (s *Session) handleSubmitSM(ctx context.Context, req pdu.Body) {
+	defer s.metrics.StartSubmitSM()()
+
+	var submitSuccess bool
+	defer func() { s.metrics.IncSubmitSM(submitSuccess) }()
+
 	if s.state != StateBoundTX && s.state != StateBoundTRX {
 		resp := pdu.NewSubmitSMResp()
 		resp.Header().Status = pdu.Status(ErrInvalidBindStatus)
@@ -298,6 +323,8 @@ func (s *Session) handleSubmitSM(ctx context.Context, req pdu.Body) {
 		messageID = result.MessageID
 	}
 
+	submitSuccess = status == ErrNoError
+
 	resp := pdu.NewSubmitSMResp()
 	resp.Header().Status = pdu.Status(status)
 	_ = resp.Fields().Set(pdufield.MessageID, messageID)
@@ -305,6 +332,11 @@ func (s *Session) handleSubmitSM(ctx context.Context, req pdu.Body) {
 }
 
 func (s *Session) handleQuerySM(ctx context.Context, req pdu.Body) {
+	defer s.metrics.StartQuerySM()()
+
+	var querySuccess bool
+	defer func() { s.metrics.IncQuerySM(querySuccess) }()
+
 	if s.state != StateBoundTX && s.state != StateBoundTRX {
 		resp := pdu.NewQuerySMResp()
 		resp.Header().Status = pdu.Status(ErrInvalidBindStatus)
@@ -338,6 +370,8 @@ func (s *Session) handleQuerySM(ctx context.Context, req pdu.Body) {
 		msgState = uint8(result.State)
 	}
 
+	querySuccess = status == ErrNoError
+
 	s.logger.Debug(
 		"Query result",
 		zap.String("message_id", messageID),
@@ -351,7 +385,6 @@ func (s *Session) handleQuerySM(ctx context.Context, req pdu.Body) {
 }
 
 func (s *Session) handleUnbind(ctx context.Context, req pdu.Body) {
-	s.state = StateOpen
 	s.logger.Info("Client unbound", zap.String("session", s.id))
 
 	err := s.client.DeregisterWebhook(ctx)
@@ -377,6 +410,11 @@ func (s *Session) writeResponse(req pdu.Body, resp pdu.Body) {
 }
 
 func (s *Session) writePDU(p pdu.Body) {
+	s.metrics.IncPDUsSent(p.Header().ID)
+	if status := uint32(p.Header().Status); status != ErrNoError {
+		s.metrics.IncError(status)
+	}
+
 	s.writeMu.Lock()
 	err := p.SerializeTo(s.conn)
 	s.writeMu.Unlock()
@@ -387,6 +425,7 @@ func (s *Session) writePDU(p pdu.Body) {
 
 func (s *Session) close() {
 	s.closeOnce.Do(func() {
+		s.metrics.DecSessionsActive(s.state)
 		close(s.quit)
 		if err := s.conn.Close(); err != nil {
 			s.logger.Error("Connection close failed", zap.Error(err))

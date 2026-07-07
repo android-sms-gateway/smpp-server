@@ -17,10 +17,11 @@ type Service struct {
 	sessions map[string]*Session
 	mux      sync.RWMutex
 
-	logger *zap.Logger
+	metrics *Metrics
+	logger  *zap.Logger
 }
 
-func NewService(config Config, clientFactory *smsgate.Factory, logger *zap.Logger) *Service {
+func NewService(config Config, clientFactory *smsgate.Factory, metrics *Metrics, logger *zap.Logger) *Service {
 	return &Service{
 		config: config,
 
@@ -29,7 +30,8 @@ func NewService(config Config, clientFactory *smsgate.Factory, logger *zap.Logge
 		sessions: map[string]*Session{},
 		mux:      sync.RWMutex{},
 
-		logger: logger,
+		metrics: metrics,
+		logger:  logger,
 	}
 }
 
@@ -46,6 +48,7 @@ func (s *Service) NewSession(conn net.Conn) *Session {
 	sess := newSession(
 		conn,
 		s.clientFactory.NewClient,
+		s.metrics,
 		s.logger,
 	)
 

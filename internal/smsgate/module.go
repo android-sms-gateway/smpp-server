@@ -9,6 +9,6 @@ func Module() fx.Option {
 	return fx.Module(
 		"smsgate",
 		logger.WithNamedLogger("smsgate"),
-		fx.Provide(NewFactory),
+		fx.Provide(NewMetrics, NewFactory),
 	)
 }

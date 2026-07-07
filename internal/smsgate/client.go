@@ -2,7 +2,6 @@ package smsgate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -15,9 +14,11 @@ type Client struct {
 	client *smsgateway.Client
 
 	webhookID string
+
+	metrics *Metrics
 }
 
-func NewClient(config Config, username, password string) *Client {
+func NewClient(config Config, username, password string, metrics *Metrics) *Client {
 	return &Client{
 		config: config,
 
@@ -30,21 +31,29 @@ func NewClient(config Config, username, password string) *Client {
 		}),
 
 		webhookID: "",
+		metrics:   metrics,
 	}
 }
 
 func (c *Client) Ping(ctx context.Context) error {
+	defer c.metrics.StartRequest("ping")()
+
 	_, err := c.client.ListDevices(ctx)
 	if err != nil {
+		c.metrics.IncRequest("ping", false)
 		return fmt.Errorf("failed to list devices: %w", err)
 	}
 
+	c.metrics.IncRequest("ping", true)
 	return nil
 }
 
 func (c *Client) RegisterWebhook(ctx context.Context, sessionID string) error {
+	defer c.metrics.StartRequest("register_webhook")()
+
 	if c.webhookID != "" {
 		if err := c.DeregisterWebhook(ctx); err != nil {
+			c.metrics.IncRequest("register_webhook", false)
 			return fmt.Errorf("failed to replace existing webhook: %w", err)
 		}
 	}
@@ -58,15 +67,19 @@ func (c *Client) RegisterWebhook(ctx context.Context, sessionID string) error {
 
 	res, err := c.client.RegisterWebhook(ctx, webhook)
 	if err != nil {
+		c.metrics.IncRequest("register_webhook", false)
 		return fmt.Errorf("failed to register webhook: %w", err)
 	}
 
 	c.webhookID = res.ID
 
+	c.metrics.IncRequest("register_webhook", true)
 	return nil
 }
 
 func (c *Client) SubmitSMS(ctx context.Context, request SubmitRequest) (*SubmitResponse, error) {
+	defer c.metrics.StartRequest("submit_sms")()
+
 	msg := smsgateway.Message{
 		PhoneNumbers: []string{request.Destination},
 		TextMessage: &smsgateway.TextMessage{
@@ -87,17 +100,22 @@ func (c *Client) SubmitSMS(ctx context.Context, request SubmitRequest) (*SubmitR
 
 	res, err := c.client.Send(ctx, msg)
 	if err != nil {
+		c.metrics.IncRequest("submit_sms", false)
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
 
+	c.metrics.IncRequest("submit_sms", true)
 	return &SubmitResponse{
 		MessageID: res.ID,
 	}, nil
 }
 
 func (c *Client) QuerySMS(ctx context.Context, messageID string) (*QueryResponse, error) {
+	defer c.metrics.StartRequest("query_sms")()
+
 	res, err := c.client.GetState(ctx, messageID)
 	if err != nil {
+		c.metrics.IncRequest("query_sms", false)
 		return nil, fmt.Errorf("failed to get message: %w", err)
 	}
 
@@ -115,6 +133,7 @@ func (c *Client) QuerySMS(ctx context.Context, messageID string) (*QueryResponse
 		state = MessageStateDeleted
 	}
 
+	c.metrics.IncRequest("query_sms", true)
 	return &QueryResponse{
 		MessageID: messageID,
 		State:     state,
@@ -126,19 +145,28 @@ func (c *Client) DeregisterWebhook(ctx context.Context) error {
 		return nil
 	}
 
+	defer c.metrics.StartRequest("deregister_webhook")()
+
 	if err := c.client.DeleteWebhook(ctx, c.webhookID); err != nil {
+		c.metrics.IncRequest("deregister_webhook", false)
 		return fmt.Errorf("failed to deregister webhook: %w", err)
 	}
 
 	c.webhookID = ""
 
+	c.metrics.IncRequest("deregister_webhook", true)
 	return nil
 }
 
 func (c *Client) Cleanup(ctx context.Context) error {
-	var err error
+	defer c.metrics.StartRequest("cleanup")()
 
-	err = errors.Join(err, c.DeregisterWebhook(ctx))
+	err := c.DeregisterWebhook(ctx)
+	if err != nil {
+		c.metrics.IncRequest("cleanup", false)
+		return err
+	}
 
-	return err
+	c.metrics.IncRequest("cleanup", true)
+	return nil
 }
