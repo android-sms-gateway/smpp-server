@@ -163,7 +163,7 @@ func commandName(id pdu.ID) string {
 	if name := id.String(); name != "" {
 		return name
 	}
-	return fmt.Sprintf("0x%08X", uint32(id))
+	return "unknown"
 }
 
 func stateLabel(s state) string {

@@ -387,9 +387,11 @@ func (s *Session) handleQuerySM(ctx context.Context, req pdu.Body) {
 func (s *Session) handleUnbind(ctx context.Context, req pdu.Body) {
 	s.logger.Info("Client unbound", zap.String("session", s.id))
 
-	err := s.client.DeregisterWebhook(ctx)
-	if err != nil {
-		s.logger.Error("Webhook deregistration failed", zap.Error(err))
+	if s.client != nil {
+		err := s.client.DeregisterWebhook(ctx)
+		if err != nil {
+			s.logger.Error("Webhook deregistration failed", zap.Error(err))
+		}
 	}
 
 	resp := pdu.NewUnbindResp()
