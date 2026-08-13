@@ -1,5 +1,5 @@
 groups:
-  - name: smpp_server:recording
+  - name: smpp-server:recording
     interval: 30s
     rules:
       - record: smpp_server:error_percentage:ratio5m
@@ -17,12 +17,12 @@ groups:
       - record: smpp_server:sessions:active
         expr: sum(smpp_sessions_active{job="smpp-server"})
 
-  - name: smpp_server:alerts
+  - name: smpp-server:alerts
     interval: 30s
     rules:
       # ── Availability ──────────────────────────────────────────────────
 
-      - alert: SmppHighBindFailureRate
+      - alert: SmppHighBindFailureRateWarning
         expr: >-
           (sum(rate(smpp_bind_attempts_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smpp_bind_attempts_total{job="smpp-server"}[5m])), 0.01))
@@ -37,7 +37,7 @@ groups:
             Bind failure rate is {{ printf "%.1f" $value }}% over the last 5 minutes.
             This may indicate authentication issues or upstream connectivity problems.
 
-      - alert: SmppHighBindFailureRate
+      - alert: SmppHighBindFailureRateCritical
         expr: >-
           (sum(rate(smpp_bind_attempts_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smpp_bind_attempts_total{job="smpp-server"}[5m])), 0.01))
@@ -52,7 +52,7 @@ groups:
             Bind failure rate is {{ printf "%.1f" $value }}% over the last 5 minutes.
             Most connection attempts are being rejected.
 
-      - alert: SmppSubmitSmHighFailureRate
+      - alert: SmppSubmitSmHighFailureRateWarning
         expr: >-
           (sum(rate(smpp_submit_sm_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smpp_submit_sm_total{job="smpp-server"}[5m])), 1))
@@ -66,7 +66,7 @@ groups:
           description: >-
             Submit SM failure rate is {{ printf "%.1f" $value }}% over the last 5 minutes.
 
-      - alert: SmppSubmitSmHighFailureRate
+      - alert: SmppSubmitSmHighFailureRateCritical
         expr: >-
           (sum(rate(smpp_submit_sm_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smpp_submit_sm_total{job="smpp-server"}[5m])), 1))
@@ -81,7 +81,7 @@ groups:
             Submit SM failure rate is {{ printf "%.1f" $value }}% over the last 5 minutes.
             Most message submissions are failing.
 
-      - alert: SmppHighErrorPercentage
+      - alert: SmppHighErrorPercentageWarning
         expr: smpp_server:error_percentage:ratio5m > 0.5
         for: 5m
         labels:
@@ -91,7 +91,7 @@ groups:
           description: >-
             Overall SMPP error rate is {{ printf "%.2f" $value }}% of all received PDUs.
 
-      - alert: SmppHighErrorPercentage
+      - alert: SmppHighErrorPercentageCritical
         expr: smpp_server:error_percentage:ratio5m > 1
         for: 5m
         labels:
@@ -103,7 +103,7 @@ groups:
 
       # ── Latency ───────────────────────────────────────────────────────
 
-      - alert: SmppSubmitSmLatencyHigh
+      - alert: SmppSubmitSmLatencyHighWarning
         expr: smpp_server:submit_sm_duration:p90 > 0.2
         for: 5m
         labels:
@@ -113,7 +113,7 @@ groups:
           description: >-
             Submit SM p90 latency is {{ printf "%.3f" $value }}s over the last 5 minutes.
 
-      - alert: SmppSubmitSmLatencyHigh
+      - alert: SmppSubmitSmLatencyHighCritical
         expr: smpp_server:submit_sm_duration:p90 > 0.5
         for: 5m
         labels:
@@ -124,7 +124,7 @@ groups:
             Submit SM p90 latency is {{ printf "%.3f" $value }}s over the last 5 minutes.
             This may indicate gateway slowness or network issues.
 
-      - alert: SmppQuerySmLatencyHigh
+      - alert: SmppQuerySmLatencyHighWarning
         expr: smpp_server:query_sm_duration:p90 > 0.1
         for: 5m
         labels:
@@ -134,7 +134,7 @@ groups:
           description: >-
             Query SM p90 latency is {{ printf "%.3f" $value }}s over the last 5 minutes.
 
-      - alert: SmppQuerySmLatencyHigh
+      - alert: SmppQuerySmLatencyHighCritical
         expr: smpp_server:query_sm_duration:p90 > 0.3
         for: 5m
         labels:
@@ -144,7 +144,7 @@ groups:
           description: >-
             Query SM p90 latency is {{ printf "%.3f" $value }}s over the last 5 minutes.
 
-      - alert: SmsGateRequestLatencyHigh
+      - alert: SmsGateRequestLatencyHighWarning
         expr: smpp_server:smsgate_request_duration:p90 > 2
         for: 5m
         labels:
@@ -154,7 +154,7 @@ groups:
           description: >-
             SMS Gateway API p90 latency is {{ printf "%.1f" $value }}s over the last 5 minutes.
 
-      - alert: SmsGateRequestLatencyHigh
+      - alert: SmsGateRequestLatencyHighCritical
         expr: smpp_server:smsgate_request_duration:p90 > 5
         for: 5m
         labels:
@@ -167,7 +167,7 @@ groups:
 
       # ── Downstream / Gateway ──────────────────────────────────────────
 
-      - alert: SmsGateHighFailureRate
+      - alert: SmsGateHighFailureRateWarning
         expr: >-
           (sum(rate(smsgate_requests_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smsgate_requests_total{job="smpp-server"}[5m])), 1))
@@ -181,7 +181,7 @@ groups:
           description: >-
             Gateway request failure rate is {{ printf "%.1f" $value }}% over the last 5 minutes.
 
-      - alert: SmsGateHighFailureRate
+      - alert: SmsGateHighFailureRateCritical
         expr: >-
           (sum(rate(smsgate_requests_total{job="smpp-server", status="failure"}[5m]))
           / clamp_min(sum(rate(smsgate_requests_total{job="smpp-server"}[5m])), 1))
@@ -198,7 +198,7 @@ groups:
 
       # ── Saturation / Resources ────────────────────────────────────────
 
-      - alert: SmppHighGoroutines
+      - alert: SmppHighGoroutinesWarning
         expr: go_goroutines{job="smpp-server"} > 500
         for: 5m
         labels:
@@ -208,7 +208,7 @@ groups:
           description: >-
             Current goroutine count is {{ printf "%.0f" $value }}.
 
-      - alert: SmppHighGoroutines
+      - alert: SmppHighGoroutinesCritical
         expr: go_goroutines{job="smpp-server"} > 1000
         for: 5m
         labels:
@@ -219,7 +219,7 @@ groups:
             Current goroutine count is {{ printf "%.0f" $value }}.
             Possible goroutine leak.
 
-      - alert: SmppHighMemoryUsage
+      - alert: SmppHighMemoryUsageWarning
         expr: process_resident_memory_bytes{job="smpp-server"} / 1024 / 1024 > 256
         for: 5m
         labels:
@@ -229,7 +229,7 @@ groups:
           description: >-
             Current resident memory is {{ printf "%.0f" $value }} MiB.
 
-      - alert: SmppHighMemoryUsage
+      - alert: SmppHighMemoryUsageCritical
         expr: process_resident_memory_bytes{job="smpp-server"} / 1024 / 1024 > 512
         for: 5m
         labels:
