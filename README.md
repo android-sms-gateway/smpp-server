@@ -42,6 +42,7 @@
   - [Option C: Build from Source](#option-c-build-from-source)
 - [Usage](#usage)
   - [Connecting](#connecting)
+  - [Known Limitations](#known-limitations)
   - [Supported Operations](#supported-operations)
   - [Delivery Receipts](#delivery-receipts)
 - [Configuration](#configuration)
@@ -163,6 +164,19 @@ Connect your SMPP client to the server using the configured bind address (defaul
 - **Bind Type**: `BIND_TRANSMITTER`, `BIND_RECEIVER`, or `BIND_TRANSCEIVER`
 - **system_id**: Your SMS Gateway username
 - **password**: Your SMS Gateway password
+
+### Known Limitations
+
+**SMPP bind password wire limit.** The SMPP v3.4 bind `password` field carries at most 9 octets. Several ESME client libraries silently truncate longer passwords before sending them (e.g. Python `smpplib` truncates to 8 octets).
+
+**Gateway credentials vs SMPP bind.** SMSGate app credentials cannot be used directly as SMPP bind credentials because they exceed the wire limit: the app enforces a minimum of 14 characters. The truncated value received by the server is therefore always rejected by the gateway REST API.
+
+**Bind error semantics.** When a bind fails, the server distinguishes the cause:
+
+- `ESME_RINVPASWD` (14) - the gateway rejected the credentials (HTTP 4xx client error, e.g. 401 Unauthorized).
+- `ESME_RBINDFAIL` (13) - any other failure (gateway 5xx, network, timeout).
+
+**Diagnosing truncation.** When authentication fails, the server logs the received `password_length`. If it is shorter than the credential's real length, the ESME client truncated the password on the wire.
 
 ### Supported Operations
 
