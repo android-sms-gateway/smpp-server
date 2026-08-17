@@ -211,8 +211,12 @@ func (s *Session) handleBind(ctx context.Context, p pdu.Body, receiver, transcei
 	client := s.clientFn(username, password)
 
 	if err := client.Ping(ctx); err != nil {
-		s.logger.Error("Ping failed", zap.Error(err))
-		status = ErrBindFail
+		s.logger.Error(
+			"Ping failed",
+			zap.Error(err),
+			zap.Int("password_length", len(password)),
+		)
+		status = bindStatusForPingError(err)
 	}
 
 	if status == ErrNoError && receiver {
