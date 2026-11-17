@@ -89,6 +89,7 @@ func (c *Client) SubmitSMS(ctx context.Context, request SubmitRequest) (*SubmitR
 		DeviceID:           "",
 		Message:            "",
 		DataMessage:        nil,
+		MmsMessage:         nil,
 		IsEncrypted:        false,
 		SimNumber:          nil,
 		WithDeliveryReport: &request.DeliveryReport,
