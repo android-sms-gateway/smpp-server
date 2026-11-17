@@ -15,6 +15,8 @@ import (
 )
 
 func TestBindStatusForPingError(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		err  error
@@ -55,6 +57,8 @@ func TestBindStatusForPingError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := bindStatusForPingError(tt.err); got != tt.want {
 				t.Errorf("bindStatusForPingError(%v) = %d (0x%X), want %d (0x%X)", tt.err, got, got, tt.want, tt.want)
 			}
@@ -67,6 +71,8 @@ func TestBindStatusForPingError(t *testing.T) {
 // -> smsgate.Client.Ping, so the mapping relies on %w through the actual
 // client library.
 func TestBindStatusForPingErrorGatewayUnauthorized(t *testing.T) {
+	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(`{"message":"unauthorized"}`))
